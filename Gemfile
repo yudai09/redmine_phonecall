@@ -19,6 +19,10 @@ gem "mimemagic"
 
 # nakano add
 gem "twilio-ruby", "~> 4.11.1"
+gem "httpclient"
+#gem "redis", "~> 3.2"
+#gem "sidekiq", "~> 2.8.2.4"
+
 
 # Request at least nokogiri 1.6.7.2 because of security advisories
 gem "nokogiri", ">= 1.6.7.2"

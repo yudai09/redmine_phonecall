@@ -1,6 +1,5 @@
 # Plugin's routes
 # See: http://guides.rubyonrails.org/routing.html
-# get 'calls', :to => 'issues#show'
 
 #post 'post/:id/calling', :to => 'calls#calling'
 #post 'issues/:id/calling', :to => 'calls#calling'
@@ -10,7 +9,9 @@
 
 resources :calls, :only => [:create]
 resources :calls, :only => [:show], :to => 'issues#show'
-resources :calls, :only => [:show], :to => 'issues#show'
+get 'calls', :to => 'issues#show'
+
+#resources :calls, :only => [:show], :to => 'issues#show'
 
 #resources :issues do
 #  member do
