@@ -3,11 +3,6 @@ class CallsController < ApplicationController
   before_action :find_issue, :only => [:create] 
 
   def create
-    #TODO delete
-    Rails.logger.info(params.inspect)
-    Rails.logger.info(@issue.inspect)
-    Rails.logger.info(User.current.inspect)
-
     saved = false
     # エスカレーション開始履歴登録
     begin
@@ -15,7 +10,7 @@ class CallsController < ApplicationController
       if saved
         pid = fork do
           call = Call.new(:issue_id => @issue.id)
-          call.escalation(@issue) 
+          call.escalation(@issue, url_for(:controller => 'issues')) 
         end
         Process.detach(pid) #子プロセスは独立
       end

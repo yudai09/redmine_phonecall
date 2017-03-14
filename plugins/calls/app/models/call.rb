@@ -5,7 +5,7 @@ class Call < ActiveRecord::Base
   unloadable
   after_initialize :set_call_setting
 
-  def escalation(issue)
+  def escalation(issue, root_url)
     Rails.logger.info("Processing by Call Escalation")
     # エスカレーション
     @escalation_rules.each.with_index(1) do |escalation_rule, escalation_index|
@@ -16,12 +16,12 @@ class Call < ActiveRecord::Base
           calling = @client.account.calls.create({
               :url => @twilio_setting.respons_url,
               :to => escalation_user.phone_number.sub(/^0/, '+81'),
-              :from => @twilio_setting.twilio_phone_number.sub(/^0/, '+81'),
+              :from => '+1' + @twilio_setting.twilio_phone_number,
               :timeout => escalation_rule.timeout})
         rescue Twilio::REST::RequestError => e
-          Rails.logger.info(e.message)
+          Rails.logger.info("Twilio Request Error Call:#{e.inspect}")
         end
-
+        
         # Wait
         sleep(escalation_rule.timeout + @twilio_setting.wait_time)
 
@@ -29,15 +29,26 @@ class Call < ActiveRecord::Base
         result = @client.account.calls.get(calling.sid)
         Rails.logger.info("  Escalation Info: status=#{result.status},time=#{convert_time(result.date_updated)}")
         @notes = make_notes(escalation_rule, escalation_user, escalation_index, result)
+        
         case result.status
         when 'completed'  # 通話成功
           save_issue_and_journal(issue, @notes)
+          #SMS送信
+          begin
+            sms = @client.account.messages.create({
+              :from => '+1' + @twilio_setting.twilio_phone_number,
+              :to => escalation_user.phone_number.sub(/^0/, '+81'),
+              :body => "#{root_url}/#{issue.id}"})  
+          rescue Twilio::REST::RequestError => e
+            Rails.logger.info("Twilio Request Error Message:#{e.inspect}")
+          end
+          Rails.logger.info(sms.inspect)
           return
         when 'failed'     # 通話失敗
           save_issue_and_journal(issue, @notes) 
           next
         when 'queued','ringing'
-          next #TODO 数回リトライできるようにする
+          next
         else # 'in-progress','busy','failed','no-answer','canceled' or other
           next
         end 
