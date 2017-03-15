@@ -1,6 +1,6 @@
 Redmine::Plugin.register :calls do
-  name 'Calls plugin'
-  author 'nifty'
-  description 'This is a plugin for Redmine'
+  name 'Call'
+  author 'Nakano Masatoshi'
+  description 'make call by twilio'
   version '0.0.1'
 end
