@@ -15,13 +15,13 @@ class Call < ActiveRecord::Base
         begin
           calling = @client.account.calls.create({
               :url => @twilio_setting.respons_url,
-              :to => escalation_user.phone_number.sub(/^0/, '+81'),
-              :from => '+1' + @twilio_setting.twilio_phone_number,
+              :to => escalation_user.phone_number,
+              :from => @twilio_setting.twilio_phone_number,
               :timeout => escalation_rule.timeout})
         rescue Twilio::REST::RequestError => e
           Rails.logger.info("Twilio Request Error Call:#{e.inspect}")
         end
-        
+
         # Wait
         sleep(escalation_rule.timeout + @twilio_setting.wait_time)
 
@@ -29,7 +29,7 @@ class Call < ActiveRecord::Base
         result = @client.account.calls.get(calling.sid)
         Rails.logger.info("  Escalation Info: status=#{result.status},time=#{convert_time(result.date_updated)}")
         @notes = make_notes(escalation_rule, escalation_user, escalation_index, result)
-        
+
         case result.status
         when 'completed'  # 通話成功
           save_issue_and_journal(issue, @notes)
@@ -38,20 +38,20 @@ class Call < ActiveRecord::Base
             sms = @client.account.messages.create({
               :from => '+1' + @twilio_setting.twilio_phone_number,
               :to => escalation_user.phone_number.sub(/^0/, '+81'),
-              :body => "#{root_url}/#{issue.id}"})  
+              :body => "#{root_url}/#{issue.id}"})
           rescue Twilio::REST::RequestError => e
             Rails.logger.info("Twilio Request Error Message:#{e.inspect}")
           end
           Rails.logger.info(sms.inspect)
           return
         when 'failed'     # 通話失敗
-          save_issue_and_journal(issue, @notes) 
+          save_issue_and_journal(issue, @notes)
           next
         when 'queued','ringing'
           next
         else # 'in-progress','busy','failed','no-answer','canceled' or other
           next
-        end 
+        end
       end
     end
     #エスカレーションで誰も出ない場合
@@ -59,7 +59,7 @@ class Call < ActiveRecord::Base
   end
 
   private
-  
+
   # エスカレーション設定
   def set_call_setting
     @twilio_setting = TwilioSetting.find(1)
@@ -74,23 +74,23 @@ class Call < ActiveRecord::Base
     # チケットはupdated_atのみ更新
     issue.touch
     # 履歴生成
-    journal = Journal.new(:journalized => issue, 
-        :journalized_id => issue.id, 
-        :notes => notes, 
+    journal = Journal.new(:journalized => issue,
+        :journalized_id => issue.id,
+        :notes => notes,
         :user_id => User.current.id )
-    
-    Issue.transaction do      
+
+    Issue.transaction do
       if !issue.save or !journal.save then
         raise ActiveRecord::Rollback
       end
     end
   end
-  
-  # 時刻変換 
+
+  # 時刻変換
   def convert_time(time_str)
     return Time.parse(time_str).in_time_zone("Asia/Tokyo").strftime('%Y年%m月%d日 %H:%M:%S')
   end
-  
+
   # 履歴文言生成
   def make_notes(escalation_rule, escalation_user, escalation_index, result)
     notes = ''
