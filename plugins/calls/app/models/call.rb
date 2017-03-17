@@ -5,55 +5,70 @@ class Call < ActiveRecord::Base
   unloadable
   after_initialize :set_call_setting
 
-  def escalation(issue, root_url)
+  WAITE_DELAY_TIME = 10
+  
+  def call(issue, root_url)
     Rails.logger.info("Processing by Call Escalation")
+    Rails.logger.info(@escalation_rule.inspect)
     # エスカレーション
-    @escalation_rules.each.with_index(1) do |escalation_rule, escalation_index|
+    for loop_count in 1..@escalation_rule.max_loop_count
       @escalation_users.each do |escalation_user|
-        Rails.logger.info("  Escalation Info: round = #{escalation_index},user = #{escalation_user.name}")
+        Rails.logger.info("  Escalation Info: round = #{loop_count}, user = #{escalation_user.name}")
         # 発信
         begin
           calling = @client.account.calls.create({
               :url => @twilio_setting.respons_url,
               :to => escalation_user.phone_number,
               :from => @twilio_setting.twilio_phone_number,
-              :timeout => escalation_rule.timeout})
+              :timeout => @escalation_rule.timeout})
+          Rails.logger.info(calling.inspect)
         rescue Twilio::REST::RequestError => e
-          Rails.logger.info("Twilio Request Error Call:#{e.inspect}")
+          Rails.logger.error("Twilio Request Error Call:#{e.backtrace.join("\n")}")
+          save_issue_and_journal(issue, "Twilio Request Error Call::#{e.message}")
         end
 
-        # Wait
-        sleep(escalation_rule.timeout + @twilio_setting.wait_time)
-
-        # Status Check
-        result = @client.account.calls.get(calling.sid)
-        Rails.logger.info("  Escalation Info: status=#{result.status},time=#{convert_time(result.date_updated)}")
-        @notes = make_notes(escalation_rule, escalation_user, escalation_index, result)
-
+        # get_rerult
+        result = get_result(calling)
+         
+        @notes = make_notes(escalation_user, result)
+        
         case result.status
         when 'completed'  # 通話成功
+          Rails.logger.info("通話成功")
           save_issue_and_journal(issue, @notes)
           #SMS送信
+          Rails.logger.info("SMS送信")
           begin
             sms = @client.account.messages.create({
-              :from => '+1' + @twilio_setting.twilio_phone_number,
-              :to => escalation_user.phone_number.sub(/^0/, '+81'),
+              :from => @twilio_setting.twilio_phone_number,
+              :to => escalation_user.phone_number,
               :body => "#{root_url}/#{issue.id}"})
+              Rails.logger.info(sms.inspect)
           rescue Twilio::REST::RequestError => e
-            Rails.logger.info("Twilio Request Error Message:#{e.inspect}")
+            Rails.logger.info("Twilio Request Error Message:#{e.backtrace.join("\n")}")
+            save_issue_and_journal(issue, "Twilio Request Error Message::#{e.message}")   
           end
+          sleep(15)
+          sms_result = @client.account.messages.get(sms.sid)
           Rails.logger.info(sms.inspect)
+          Rails.logger.info(sms_result.status)
           return
         when 'failed'     # 通話失敗
+          Rails.logger.info("通話失敗")
           save_issue_and_journal(issue, @notes)
           next
         when 'queued','ringing'
+          Rails.logger.info("ここでリトライをかける")
+          #リトライ
           next
         else # 'in-progress','busy','failed','no-answer','canceled' or other
+          Rails.logger.info("次のユーザへ")
           next
         end
       end
+        Rails.logger.info("次のループへ")
     end
+    Rails.logger.info("誰も出ない")
     #エスカレーションで誰も出ない場合
     save_issue_and_journal(issue, @notes)
   end
@@ -62,8 +77,10 @@ class Call < ActiveRecord::Base
 
   # エスカレーション設定
   def set_call_setting
+    @count = 0
+    @status = nil
     @twilio_setting = TwilioSetting.find(1)
-    @escalation_rules = EscalationRule.select(:timeout).order(:priority)
+    @escalation_rule = EscalationRule.find(1)
     @escalation_users = EscalationUser.select(:name,:phone_number).order(:priority)
     # set up a client to talk to the Twilio REST API
     @client = Twilio::REST::Client.new @twilio_setting.account_sid, @twilio_setting.auth_token
@@ -92,21 +109,33 @@ class Call < ActiveRecord::Base
   end
 
   # 履歴文言生成
-  def make_notes(escalation_rule, escalation_user, escalation_index, result)
+  def make_notes(escalation_user, result)
     notes = ''
     case result.status
     when 'completed'
-      notes = "#{escalation_index}周目のエスカレーションで\
-               #{escalation_user.name}が電話を取りました。\
+      notes = "#{@count}回目の発信で#{escalation_user.name}が電話を取りました。\
                (#{convert_time(result.start_time)})"
     when 'failed'
       notes = "#{escalation_user.name}に通話を試みましが失敗しました。\
                電話番号が正しいか確認をしてください"
     else
-      notes = "#{@escalation_users.size}人に#{@escalation_rules.size}回の\
-               エスカレーションを行いましたが、誰も電話を取ることができませんでした。\
-               再度エスカレーションを試みてください。"
+      notes = "#{@escalation_users.size}人に#{@contu}回の発信を行いましたが、\
+               誰も電話を取ることができませんでした。再度電話を試みてください。"
     end
     return notes
   end
+  
+  # 通話ステータスチェック
+  def get_result(instance)
+  
+        # Wait
+        sleep(@escalation_rule.timeout + WAITE_DELAY_TIME)
+  
+        # Status Check
+        result = @client.account.calls.get(instance.sid)
+        Rails.logger.info("  Escalation Info: status=#{result.status},time=#{convert_time(result.date_updated)}")
+
+        return result
+  end
+
 end
