@@ -31,13 +31,13 @@ class CallsController < ApplicationController
   private
   
   def save_start_escalation_info
-    @issue.touch
     journal = Journal.new(:journalized => @issue,
                           :journalized_id => @issue.id,
                           :notes => "エスカレーションを開始しました。\
                                      (#{Time.now.to_time.strftime('%Y年%m月%d日 %H:%M:%S')})",
                           :user_id => User.current.id )
     Issue.transaction do
+      @issue.touch
       if !@issue.save or !journal.save
         raise ActiveRecord::Rollback
         return false
