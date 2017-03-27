@@ -8,6 +8,7 @@ class CallsController < ApplicationController
     begin
       saved = save_start_escalation_info
       if saved
+        Rails.logger.info("  Fork Procces Call")
         pid = fork do
           caller = Call.new(:issue_id => @issue.id)
           caller.call(@issue, url_for(:controller => 'issues')) 
@@ -33,8 +34,7 @@ class CallsController < ApplicationController
   def save_start_escalation_info
     journal = Journal.new(:journalized => @issue,
                           :journalized_id => @issue.id,
-                          :notes => "エスカレーションを開始しました。\
-                                     (#{Time.now.to_time.strftime('%Y年%m月%d日 %H:%M:%S')})",
+                          :notes => "エスカレーションを開始しました。",
                           :user_id => User.current.id )
     Issue.transaction do
       @issue.touch
