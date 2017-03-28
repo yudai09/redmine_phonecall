@@ -1,0 +1,13 @@
+<%= error_messages_for 'escalation_user_form' %>
+
+<div id="escalation_user_form">
+<!--[form:escalation_user]-->
+<div class="box tabular">
+<fieldset class="box tabular">
+  <legend>Escalation User</legend>
+  <p><%= f.text_field :name, :required => true, :size => 25  %></p>
+  <p><%= f.text_field :phone_number, :required => true, :size => 25  %></p>
+  <%= call_hook(:view_escalation_users_form, :escalation_user => @escalation_user, :form => f) %>
+</fieldset>
+</div>
+</div>

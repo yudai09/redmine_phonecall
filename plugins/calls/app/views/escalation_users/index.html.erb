@@ -1,0 +1,21 @@
+<div class="contextual">
+<%= link_to '新しいエスカレーションユーザの追加', new_escalation_user_path, :class => 'icon icon-add' %>
+</div>
+<div>
+  <table class="list users">
+  <thead><tr>
+  <th>id</th>
+  <th>名前</th>
+  <th>電話番号</th>
+  </tr></thead>
+  <tbody>
+  <% EscalationUser.all.each do |escalation_user| -%>
+  <tr>
+  <td><%= escalation_user.id %></td>
+  <td><%= escalation_user.name %></td>
+  <td><%= escalation_user.phone_number %></td>
+  </tr>
+  <% end %>
+  </tbody>
+  </table>
+</div>

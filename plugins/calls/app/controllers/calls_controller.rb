@@ -9,11 +9,11 @@ class CallsController < ApplicationController
       saved = save_start_escalation_info
       if saved
         Rails.logger.info("  Fork Procces Call")
-        pid = fork do
+        #pid = fork do
           caller = Call.new(:issue_id => @issue.id)
           caller.call(@issue, url_for(:controller => 'issues')) 
-        end
-        Process.detach(pid) #子プロセスは独立
+        #end
+        #Process.detach(pid) #子プロセスは独立
       end
     rescue ActiveRecord::StaleObjectError
       @conflict = true
