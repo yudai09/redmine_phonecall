@@ -27,7 +27,9 @@ class Call < ActiveRecord::Base
             Rails.logger.info("  Call Info : status=#{@call_status}")
           end
         rescue Twilio::REST::RequestError => e
-          eails.logger.error("Twilio Request Error Call:#{e.backtrace.join("\n")}")
+          Rails.logger.error("Twilio Request Error Call:#{e.backtrace.join("\n")}")
+          @notes = "Twilio Request Error Call: #{e.message}, user=#{escalation_user.name}, phone_number=#{escalation_user.phone_number}"
+          save_issue_and_journal(issue)
         end
         
         # チケット文言生成 
@@ -103,7 +105,8 @@ class Call < ActiveRecord::Base
       end
     rescue Twilio::REST::RequestError => e
       Rails.logger.error("Twilio Request Error Message:#{e.backtrace.join("\n")}")
-      save_issue_and_journal(issue, "Twilio Request Error Message::#{e.message}")   
+      @notes = "Twilio Request Error Message::#{e.message}, user=#{escalation_user.name}, phone_number=#{escalation_user.phone_number}"
+      save_issue_and_journal(issue)   
     end
   end
   

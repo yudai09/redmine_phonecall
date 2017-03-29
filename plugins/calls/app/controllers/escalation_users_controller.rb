@@ -1,6 +1,7 @@
 class EscalationUsersController < ApplicationController
   unloadable
-
+  before_action :find_escalation_user, :only => [:show, :edit, :update, :destroy]
+ 
   def index
     @escalation_users = EscalationUser.all
   end
@@ -25,12 +26,36 @@ class EscalationUsersController < ApplicationController
     end
   end
 
+  def edit
+  end
+  
+  def update
+    respond_to do |format|
+      if @escalation_user.update(post_params)
+        format.html { redirect_to plugin_settings_path(id: 'calls'), notice: 'Friend was successfully created.' } 
+      else
+        format.html { render :action => :edit }
+      end
+    end
+  end
+ 
+  def destroy
+    @escalation_user.destroy
+    respond_to do |format|
+      format.html { redirect_back_or_default(plugin_settings_path(id: 'calls')) }
+    end
+  end
+
 private
 
   def post_params
     params.require(:escalation_user).permit(
       :name, :phone_number
     )
+  end
+
+  def find_escalation_user
+    @escalation_user = EscalationUser.find(params[:id])
   end
 
 end

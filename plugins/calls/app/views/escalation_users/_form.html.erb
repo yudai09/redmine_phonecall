@@ -1,12 +1,18 @@
-<%= error_messages_for 'escalation_user_form' %>
+<%= error_messages_for 'escalation_user' %>
 
 <div id="escalation_user_form">
 <!--[form:escalation_user]-->
 <div class="box tabular">
 <fieldset class="box tabular">
   <legend>Escalation User</legend>
-  <p><%= f.text_field :name, :required => true, :size => 25  %></p>
-  <p><%= f.text_field :phone_number, :required => true, :size => 25  %></p>
+  <p>
+    <%= f.text_field :name, :required => true, :size => 25  %>
+  </p>
+  <p>
+    <%= f.text_field :phone_number, :required => true, :size => 25  %>
+    <em class="info">ユーザの電話番号を国際表記(先頭'+')で入力してください。</em>
+    <em class="info">例）'090XXXXXXXX' の場合、'+8190XXXXXXXX' と入力</em>
+  </p>
   <%= call_hook(:view_escalation_users_form, :escalation_user => @escalation_user, :form => f) %>
 </fieldset>
 </div>
