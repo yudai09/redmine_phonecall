@@ -85,7 +85,7 @@ class Call < ActiveRecord::Base
   end
   
   # SMS通知
-  def send_sms(escalation_user, root_url, issue)
+  def send_sms(user, root_url, issue)
     #SMS送信
     Rails.logger.info("  Call Info : Send SMS")
     begin
@@ -94,7 +94,7 @@ class Call < ActiveRecord::Base
         send_sms = @client.account.messages.create({
           :from => Setting.plugin_calls['twilio_phone_number'],
           :to => escalation_user.phone_number,
-          :body => "#{root_url}/#{issue.id}"})
+          :body => "#{root_url}/#{issue.id} \n pick up user = #{user.name}"})
         Rails.logger.info("  Call Info : send_sms=#{send_sms.inspect}")
         sms_sid_list.push(send_sms.sid)
       end
