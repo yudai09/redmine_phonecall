@@ -9,9 +9,9 @@ class Call < ActiveRecord::Base
   MAX_CALLING_COUNT = 2   # 通話結果が"発信待ち","呼び出し中","通話中"のいずれかの場合の再確認回数
   
   def call(issue, root_url)
-    Rails.logger.info("Processing by Call : #{@escalation_rule.inspect}")
+    Rails.logger.info("Processing by Call :")
     # エスカレーション
-    (1..@escalation_rule.max_loop_count).each.with_index(1) do |loop_count|
+    (1..Setting.plugin_calls['max_loop_count'].to_i).each.with_index(1) do |loop_count|
       @escalation_users.each do |escalation_user|
         Rails.logger.info("  Call Info : round=#{loop_count}, user=#{escalation_user.name}")
         calling_count ||= 0
@@ -20,7 +20,7 @@ class Call < ActiveRecord::Base
           calling ||= to_call(escalation_user)
           Rails.logger.info("  Call Info : calling=#{calling.inspect}")
           # Wait
-          sleep(@escalation_rule.timeout + WAITE_DELAY_TIME)
+          sleep(Setting.plugin_calls['timeout'].to_i + WAITE_DELAY_TIME)
           # ステータス取得
           if !calling.nil?
             @call_status = @client.account.calls.get(calling.sid).status
@@ -28,6 +28,8 @@ class Call < ActiveRecord::Base
           end
         rescue Twilio::REST::RequestError => e
           Rails.logger.error("Twilio Request Error Call:#{e.backtrace.join("\n")}")
+          @notes = "Twilio Request Error Call: #{e.message}, user=#{escalation_user.name}, phone_number=#{escalation_user.phone_number}"
+          save_issue_and_journal(issue)
         end
         
         # チケット文言生成 
@@ -68,20 +70,18 @@ class Call < ActiveRecord::Base
   # エスカレーション設定
   def set_call_setting
     @call_status = ''
-    @twilio_setting = TwilioSetting.find(1)
-    @escalation_rule = EscalationRule.find(1)
     @escalation_users = EscalationUser.select(:name,:phone_number).order(:priority)
     # set up a client to talk to the Twilio REST API
-    @client = Twilio::REST::Client.new @twilio_setting.account_sid, @twilio_setting.auth_token
+    @client = Twilio::REST::Client.new Setting.plugin_calls['twilio_sid'], Setting.plugin_calls['twilio_token']
   end
 
   # Twilioで通知
   def to_call(escalation_user)
     return @client.account.calls.create({
-             :url => @twilio_setting.respons_url,
+             :url => Setting.plugin_calls['twilio_respons_url'],
              :to => escalation_user.phone_number,
-             :from => @twilio_setting.twilio_phone_number,
-             :timeout => @escalation_rule.timeout})
+             :from => Setting.plugin_calls['twilio_phone_number'],
+             :timeout => Setting.plugin_calls['timeout'].to_i})
   end
   
   # SMS通知
@@ -92,7 +92,7 @@ class Call < ActiveRecord::Base
     sms_sid_list = []
       @escalation_users.each do |escalation_user|
         send_sms = @client.account.messages.create({
-          :from => @twilio_setting.twilio_phone_number,
+          :from => Setting.plugin_calls['twilio_phone_number'],
           :to => escalation_user.phone_number,
           :body => "#{root_url}/#{issue.id}"})
         Rails.logger.info("  Call Info : send_sms=#{send_sms.inspect}")
@@ -105,7 +105,8 @@ class Call < ActiveRecord::Base
       end
     rescue Twilio::REST::RequestError => e
       Rails.logger.error("Twilio Request Error Message:#{e.backtrace.join("\n")}")
-      save_issue_and_journal(issue, "Twilio Request Error Message::#{e.message}")   
+      @notes = "Twilio Request Error Message::#{e.message}, user=#{escalation_user.name}, phone_number=#{escalation_user.phone_number}"
+      save_issue_and_journal(issue)   
     end
   end
   
