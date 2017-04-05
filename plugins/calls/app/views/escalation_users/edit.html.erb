@@ -1,0 +1,12 @@
+<div class="contextual">
+   <%= delete_link escalation_user_path(@escalation_user) %>
+</div>
+
+ <%= title [l(:label_call_settings), plugin_settings_path(id: 'calls')], @escalation_user.phone_number %> 
+
+<%= labelled_form_for @escalation_user, :html => {:multipart => true} do |f| %>
+  <%= render :partial => 'form', :locals => { :f => f} %>
+  <p>
+    <%= submit_tag l(:button_save) %>
+  </p>
+<% end %>
