@@ -8,13 +8,13 @@ class CallsController < ApplicationController
     begin
       saved = save_start_escalation_info
       if saved
+        Rails.logger.info("  Fork Procces Call")
         pid = fork do
-          call = Call.new(:issue_id => @issue.id)
-          call.escalation(@issue, url_for(:controller => 'issues')) 
+          caller = Call.new(:issue_id => @issue.id)
+          caller.call(@issue, url_for(:controller => 'issues')) 
         end
         Process.detach(pid) #子プロセスは独立
       end
-    # 楽観ロック
     rescue ActiveRecord::StaleObjectError
       @conflict = true
     end
@@ -32,13 +32,12 @@ class CallsController < ApplicationController
   private
   
   def save_start_escalation_info
-    @issue.touch
     journal = Journal.new(:journalized => @issue,
                           :journalized_id => @issue.id,
-                          :notes => "エスカレーションを開始しました。\
-                                     (#{Time.now.to_time.strftime('%Y年%m月%d日 %H:%M:%S')})",
+                          :notes => "エスカレーションを開始しました。",
                           :user_id => User.current.id )
     Issue.transaction do
+      @issue.touch
       if !@issue.save or !journal.save
         raise ActiveRecord::Rollback
         return false
