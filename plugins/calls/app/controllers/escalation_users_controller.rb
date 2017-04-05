@@ -26,9 +26,6 @@ class EscalationUsersController < ApplicationController
     end
   end
 
-  def edit
-  end
-  
   def update
     respond_to do |format|
       if @escalation_user.update(post_params)
