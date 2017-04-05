@@ -5,7 +5,7 @@ class Call < ActiveRecord::Base
   unloadable
   after_initialize :set_call_setting
 
-  WAITE_DELAY_TIME = 10   # Twilio-API呼び出し時の待ち時間
+  WAIT_DELAY_TIME = 10   # Twilio-API呼び出し時の待ち時間
   MAX_CALLING_COUNT = 2   # 通話結果が"発信待ち","呼び出し中","通話中"のいずれかの場合の再確認回数
   
   def call(issue, root_url)
@@ -20,7 +20,7 @@ class Call < ActiveRecord::Base
           calling ||= to_call(escalation_user)
           Rails.logger.info("  Call Info : calling=#{calling.inspect}")
           # Wait
-          sleep(Setting.plugin_calls['timeout'].to_i + WAITE_DELAY_TIME)
+          sleep(Setting.plugin_calls['timeout'].to_i + WAIT_DELAY_TIME)
           # ステータス取得
           if !calling.nil?
             @call_status = @client.account.calls.get(calling.sid).status
@@ -85,7 +85,7 @@ class Call < ActiveRecord::Base
   end
   
   # SMS通知
-  def send_sms(escalation_user, root_url, issue)
+  def send_sms(user, root_url, issue)
     #SMS送信
     Rails.logger.info("  Call Info : Send SMS")
     begin
@@ -94,11 +94,11 @@ class Call < ActiveRecord::Base
         send_sms = @client.account.messages.create({
           :from => Setting.plugin_calls['twilio_phone_number'],
           :to => escalation_user.phone_number,
-          :body => "#{root_url}/#{issue.id}"})
+          :body => "#{root_url}/#{issue.id} \n pick up user = #{user.name}"})
         Rails.logger.info("  Call Info : send_sms=#{send_sms.inspect}")
         sms_sid_list.push(send_sms.sid)
       end
-      sleep(WAITE_DELAY_TIME)
+      sleep(WAIT_DELAY_TIME)
       sms_sid_list.each do |sid|
          result_sms = @client.account.messages.get(sid)
          Rails.logger.info("  Call Info : result_sms to=#{result_sms.to}, status=#{result_sms.status}")
