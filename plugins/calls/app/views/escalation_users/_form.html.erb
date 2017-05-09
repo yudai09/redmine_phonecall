@@ -13,6 +13,9 @@
     <em class="info">ユーザの電話番号を国際表記(先頭'+')で入力してください。</em>
     <em class="info">例）'090XXXXXXXX' の場合、'+8190XXXXXXXX' と入力</em>
   </p>
+  <p>
+    <%= f.text_field :priority, :required => true ,:size => 5 %>
+  </p>
   <%= call_hook(:view_escalation_users_form, :escalation_user => @escalation_user, :form => f) %>
 </fieldset>
 </div>

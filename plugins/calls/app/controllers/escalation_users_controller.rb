@@ -3,7 +3,7 @@ class EscalationUsersController < ApplicationController
   before_action :find_escalation_user, :only => [:show, :edit, :update, :destroy]
  
   def index
-    @escalation_users = EscalationUser.all
+    @escalation_users = EscalationUser.order(:priority)
   end
   
   def new
@@ -47,7 +47,7 @@ private
 
   def post_params
     params.require(:escalation_user).permit(
-      :name, :phone_number
+      :name, :phone_number, :priority
     )
   end
 
