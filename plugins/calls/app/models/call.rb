@@ -13,7 +13,7 @@ class Call < ActiveRecord::Base
     # エスカレーション
     (1..Setting.plugin_calls['max_loop_count'].to_i).each.with_index(1) do |loop_count|
       @escalation_users.each do |escalation_user|
-        Rails.logger.info("  Call Info : round=#{loop_count}, user=#{escalation_user.name}")
+        Rails.logger.info("  Call Info : round=#{loop_count}, user=#{escalation_user.user.name}")
         calling_count ||= 0
         begin
           # 発信
@@ -28,7 +28,7 @@ class Call < ActiveRecord::Base
           end
         rescue Twilio::REST::RequestError => e
           Rails.logger.error("Twilio Request Error Call:#{e.backtrace.join("\n")}")
-          @notes = "Twilio Request Error Call: #{e.message}, user=#{escalation_user.name}, phone_number=#{escalation_user.phone_number}"
+          @notes = "Twilio Request Error Call: #{e.message}, user=#{escalation_user.user.name}, phone_number=#{escalation_user.phone_number}"
           save_issue_and_journal(issue)
         end
         
@@ -70,7 +70,7 @@ class Call < ActiveRecord::Base
   # エスカレーション設定
   def set_call_setting
     @call_status = ''
-    @escalation_users = EscalationUser.select(:name,:phone_number).order(:priority)
+    @escalation_users = EscalationUser.order(:priority)
     # set up a client to talk to the Twilio REST API
     @client = Twilio::REST::Client.new Setting.plugin_calls['twilio_sid'], Setting.plugin_calls['twilio_token']
   end
@@ -94,7 +94,7 @@ class Call < ActiveRecord::Base
         send_sms = @client.account.messages.create({
           :from => Setting.plugin_calls['twilio_phone_number'],
           :to => escalation_user.phone_number,
-          :body => "#{root_url}/#{issue.id} \n pick up user = #{user.name}"})
+          :body => "#{root_url}/#{issue.id} \n pick up user = #{user.user.name}"})
         Rails.logger.info("  Call Info : send_sms=#{send_sms.inspect}")
         sms_sid_list.push(send_sms.sid)
       end
@@ -105,7 +105,7 @@ class Call < ActiveRecord::Base
       end
     rescue Twilio::REST::RequestError => e
       Rails.logger.error("Twilio Request Error Message:#{e.backtrace.join("\n")}")
-      @notes = "Twilio Request Error Message::#{e.message}, user=#{escalation_user.name}, phone_number=#{escalation_user.phone_number}"
+      @notes = "Twilio Request Error Message::#{e.message}, user=#{escalation_user.user.name}, phone_number=#{escalation_user.phone_number}"
       save_issue_and_journal(issue)   
     end
   end
@@ -131,9 +131,9 @@ class Call < ActiveRecord::Base
     notes = ''
     case @call_status
     when 'completed'
-      notes = "#{loop_count}回目の発信で#{escalation_user.name}が電話を取りました。"
+      notes = "#{loop_count}回目の発信で#{escalation_user.user.name}が電話を取りました。"
     when 'failed'
-      notes = "#{escalation_user.name}に通話を試みましが失敗しました。\
+      notes = "#{escalation_user.user.name}に通話を試みましが失敗しました。\
                電話番号が正しいか確認をしてください"
     else
       notes = "#{@escalation_users.size}人に#{loop_count}回の発信を行いましたが、\

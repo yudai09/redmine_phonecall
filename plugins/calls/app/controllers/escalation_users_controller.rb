@@ -47,7 +47,7 @@ private
 
   def post_params
     params.require(:escalation_user).permit(
-      :name, :phone_number, :priority
+      :user_id, :phone_number, :priority
     )
   end
 

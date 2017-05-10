@@ -6,7 +6,7 @@
 <fieldset class="box tabular">
   <legend>Escalation User</legend>
   <p>
-    <%= f.text_field :name, :required => true, :size => 25  %>
+    <%= f.collection_select :user_id, User.all, :id, :name %>
   </p>
   <p>
     <%= f.text_field :phone_number, :required => true, :size => 25  %>

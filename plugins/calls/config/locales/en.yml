@@ -2,6 +2,9 @@
 en:
   button_call: "電話"
   field_phone_number: "電話番号"
+  field_id: "Id"
+  field_user_id: "UserId"
+  field_priority: "Priority"
   label_call_settings: "Call Settings"
   label_escalation_user_new: "新しいエスカレーションユーザー"
   # my_label: "My label"
