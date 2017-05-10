@@ -6,6 +6,7 @@
   <thead><tr>
   <th><%=l(:field_id)%></th>
   <th><%=l(:field_user_id)%></th>
+  <th><%=l(:field_name)%></th>
   <th><%=l(:field_phone_number)%></th>
   <th><%=l(:field_priority)%></th>
   <th></th>
@@ -15,6 +16,7 @@
   <tr>
   <td><%= link_to escalation_user.id, edit_escalation_user_path(escalation_user) %></td>
   <td><%= escalation_user.user_id %></td>
+  <td><%= escalation_user.user.firstname + ' ' + escalation_user.user.lastname %></td>
   <td><%= escalation_user.phone_number %></td>
   <td><%= escalation_user.priority %></td>
   <td class="buttons">
