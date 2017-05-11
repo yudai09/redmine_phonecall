@@ -4,6 +4,7 @@ require 'twilio-ruby'
 class Call < ActiveRecord::Base
   unloadable
   after_initialize :set_call_setting
+  after_create :send_nitification
 
   WAIT_DELAY_TIME = 10   # Twilio-API呼び出し時の待ち時間
   MAX_CALLING_COUNT = 2   # 通話結果が"発信待ち","呼び出し中","通話中"のいずれかの場合の再確認回数
@@ -140,6 +141,18 @@ class Call < ActiveRecord::Base
                誰も電話を取ることができませんでした。再度電話を試みてください。"
     end
     return notes
+  end
+
+  # メール送信
+  def send_notification(issue)
+    to = Array.new
+    @escalation_users.each do |escalation_user|
+      to.push(escalation_user.user)
+    end
+    cc = []
+    issue.each_notification(to) do |users| 
+      Mailer.issue_add(issue, users, cc).deliver
+    end
   end
 
 end
