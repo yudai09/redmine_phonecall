@@ -4,7 +4,6 @@ require 'twilio-ruby'
 class Call < ActiveRecord::Base
   unloadable
   after_initialize :set_call_setting
-  after_create :send_nitification
 
   WAIT_DELAY_TIME = 10   # Twilio-API呼び出し時の待ち時間
   MAX_CALLING_COUNT = 2   # 通話結果が"発信待ち","呼び出し中","通話中"のいずれかの場合の再確認回数
@@ -41,6 +40,7 @@ class Call < ActiveRecord::Base
           save_issue_and_journal(issue)
           Rails.logger.info("  Call Info : Success Call")
           send_sms(escalation_user, root_url, issue)
+          send_notification(issue)
           return
         when 'failed'     # 通話失敗
           save_issue_and_journal(issue)
