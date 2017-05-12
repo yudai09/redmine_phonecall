@@ -40,6 +40,7 @@ class Call < ActiveRecord::Base
           save_issue_and_journal(issue)
           Rails.logger.info("  Call Info : Success Call")
           send_sms(escalation_user, root_url, issue)
+          send_notification(issue)
           return
         when 'failed'     # 通話失敗
           save_issue_and_journal(issue)
@@ -140,6 +141,18 @@ class Call < ActiveRecord::Base
                誰も電話を取ることができませんでした。再度電話を試みてください。"
     end
     return notes
+  end
+
+  # メール送信
+  def send_notification(issue)
+    to = Array.new
+    @escalation_users.each do |escalation_user|
+      to.push(escalation_user.user)
+    end
+    cc = []
+    issue.each_notification(to) do |users| 
+      Mailer.issue_add(issue, users, cc).deliver
+    end
   end
 
 end
